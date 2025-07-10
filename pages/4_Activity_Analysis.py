@@ -22,7 +22,8 @@ email = st.session_state.user_email
 
 reports_df, datasets_df, users_df = get_filtered_dataframes(token, workspace, email)
 
-activity_data = st.file_uploader("Upload csv file...")
+activity_data = "sample_analysis/data.csv"
+# activity_data = st.file_uploader("Upload CSV file...")
 if activity_data:
     activity_df = pd.read_csv(activity_data)
     activity_df2=activity_df
@@ -65,11 +66,11 @@ if activity_data:
     else:
         fig_alpha = 0.01
     with st.expander("📊 User Insights"):
-        col1, col2 = st.columns([2,1])
+        col1, col2 = st.columns([4,2])
         with col1:
             st.subheader("Artifact Access Heatmap")
             heatmap_data = activity_df.groupby(["User email", "Artifact Name"]).size().unstack(fill_value=0)
-            fig, ax = plt.subplots(figsize=(12,3))
+            fig, ax = plt.subplots(figsize=(5,3))
             fig.patch.set_alpha(fig_alpha)
             ax.patch.set_alpha(fig_alpha)   
             ax.title.set_color('gray')
@@ -83,7 +84,7 @@ if activity_data:
             st.pyplot(fig)
         with col2:
             st.subheader("User Activity Status")
-            fig, ax = plt.subplots(figsize=(4, 3))
+            fig, ax = plt.subplots(figsize=(3, 5))
             fig.patch.set_alpha(fig_alpha)
             ax.patch.set_alpha(fig_alpha )   
             ax.title.set_color('gray')
@@ -139,7 +140,7 @@ if activity_data:
     with st.expander("📅 Weekly and Monthly Access Patterns"):
         col1,col2= st.columns(2)
         with col1:
-            st.subheader("📆 Weekday Activity (Line Chart)")
+            st.subheader("📆 Weekday Activity")
 
             activity_df["Weekday"] = activity_df["Activity time"].dt.day_name()
             weekday_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -186,7 +187,8 @@ if activity_data:
         "📌 Recently Accessed Artifacts": "recent",
         "🧍‍♂️ Users Activity Status": "users",
         "📈 Reports Latest Activity": "reports",
-        "🗃️ Datasets Latest Activity": "datasets"
+        "🗃️ Datasets Latest Activity": "datasets",
+        "📭 Unused Artifacts": "artifacts"
     }
 
     selected_key = st.selectbox(
@@ -216,5 +218,18 @@ if activity_data:
     elif selected_value == "datasets":
         st.subheader("📌 Datasets Latest Activity")
         st.dataframe(datasets_df)
+
+    elif selected_value == "artifacts":
+        report_names = reports_df["name"]
+        dataset_names = datasets_df["name"]
+        all_artifact_names = pd.concat([report_names, dataset_names], ignore_index=True).dropna().unique()
+        used_artifact_names = activity_df["Artifact Name"].dropna().unique()
+        artifact_status_df = pd.DataFrame(all_artifact_names, columns=["Artifact Name"])
+        artifact_status_df["Usage Status"] = artifact_status_df["Artifact Name"].apply(
+            lambda x: "Used" if x in used_artifact_names else "Unused"
+        )
+        unused_artifacts_df = artifact_status_df[artifact_status_df["Usage Status"] == "Unused"]
+        st.subheader("📭 Unused Artifacts")
+        st.dataframe(unused_artifacts_df, use_container_width=True)
         
     st.markdown("""<hr style="margin-top:1rem; margin-bottom:1rem;">""", unsafe_allow_html=True)
